@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 """Python wrapper for an API."""
-
 try:
     import json
 except ImportError:  # pragma: no cover
@@ -18,6 +17,8 @@ try:
     from urllib2 import urlopen
 except ImportError:  # pragma: no cover
     # For Python 3.
+    import sys
+    import socket
     from urllib.request import urlopen
 
 from xml2dict import xml2dict
@@ -26,9 +27,12 @@ from xml2dict import xml2dict
 class API(object):
     """An example class for a Python API wrapper."""
 
-    def __init__(self, api_key=''):
+    def __init__(self, api_key='', timeout=None):
         if api_key:
             self.api_key = api_key
+        self.timeout = None
+        if timeout:
+            self.timeout = int(timeout)
         self.base_url = ''
         self.output_format = None
         self.required_params = None
@@ -48,11 +52,23 @@ class API(object):
             output_format = kwargs.pop('output_format')
         except KeyError:
             output_format = self.output_format
+        try:
+            timeout = int(kwargs.pop('timeout'))
+        except KeyError:
+            timeout = self.timeout
         if kwargs:
             params = urlencode(kwargs)
             url_list.extend(['?', params])
         url = ''.join(url_list)
-        data = urlopen(url).read()
+        if urlopen.__module__ == 'urllib2' or sys.version.startswith('3'):
+            # newer versions of urlopen take a timeout arg
+            data = urlopen(url, None, timeout).read()
+        else:
+            # older versions use socket
+            _timeout = socket.getdefaulttimeout()
+            socket.setdefaulttimeout(timeout)
+            data = urlopen(url).read()
+            socket.setdefaulttimeout(_timeout)
         return self._format_data(output_format, data)
 
     def _check_base_url(self):
