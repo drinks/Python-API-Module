@@ -69,6 +69,7 @@ class API(object):
             socket.setdefaulttimeout(timeout)
             data = urlopen(url).read()
             socket.setdefaulttimeout(_timeout)
+
         return self._format_data(output_format, data)
 
     def _check_base_url(self):
